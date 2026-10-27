@@ -17,7 +17,7 @@ def load_meta(fs, root) -> list[dict]:
             metadata = json.load(f)
             hour = None if metadata.get("request_time") is None else datetime.datetime.fromisoformat(metadata.get("request_time")).hour
             status = metadata.get("status", "ok")
-            results.append({"path": path, "hour": hour, "time_to_headers": metadata.get("duration_time_to_headers"), "stream_duration" :metadata.get("stream_duration"), "status": status})
+            results.append({"path": path, "hour": hour, "time_to_headers": metadata.get("duration_time_to_headers"), "stream_duration" :metadata.get("stream_duration"), "status": status, "size_in_bytes": metadata.get("size_in_bytes")})
     return results
 
 
@@ -45,13 +45,13 @@ def main():
     stream_duration = []
     total_time = []
     per_hour_time_to_headers = {}
-    per_hour_count_more_than_25 = {}
+    more_than_25 = []
     for meta in extracted_metadata:
         time_to_headers.append(meta["time_to_headers"])
         stream_duration.append(meta["stream_duration"])
         total_time.append(None if meta["time_to_headers"] is None or meta["stream_duration"] is None else meta["time_to_headers"]+meta["stream_duration"])
-        if total_time > 25 and meta["hour"] is not None:
-            per_hour_count_more_than_25.setdefault(meta["hour"], 0) += 1
+        if total_time[-1] is not None and total_time[-1] > 25:
+            more_than_25.append(meta)
         if meta["hour"] is not None:
             per_hour_time_to_headers.setdefault(meta["hour"], []).append(meta["time_to_headers"])
     print_stats("time_to_headers", time_to_headers)
@@ -60,6 +60,7 @@ def main():
     per_hour_time_to_headers_sorted = dict(sorted(per_hour_time_to_headers.items()))
     for hour in per_hour_time_to_headers_sorted.keys():
         print_stats(hour, per_hour_time_to_headers_sorted[hour])
+    print(more_than_25)
         
 
 
