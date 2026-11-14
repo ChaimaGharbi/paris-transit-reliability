@@ -66,11 +66,11 @@ sequenceDiagram
         API-->>P: 200 + gzip body
         P->>P: commit .json.gz + .meta.json (status ok)
     else still failing, or deadline 90 s reached
-        P->>P: write .meta.json (status failed) + .error.json if a body came back
+        P->>P: write .meta.json (status failed) + .error if a body came back
     end
 ```
 
-- **Max 2 retries** (3 attempts per run)
+- **Max 2 retries** (3 attempts per run); the last attempt gets whatever time is left before the deadline, and is skipped if under 5 s
 - **Exponential backoff** between attempts (~5 s, then ~10 s), with a little random jitter
 - **Timeout on every request:** `(connect, read) = (5 s, 15 s)`, see "Timeout sizing"
 - **Deadline: 90 s after the run starts.** No new attempt after it; leaves 30 s margin before the next run
@@ -107,13 +107,15 @@ Measured with Timing Stats on 8,499 runs (Oct 15 to 27):
 |---|---|---|
 | `<ts>.meta.json` | **every run**, success or failure | metadata + `status` (`ok` / `failed`), attempts, last error |
 | `<ts>.json.gz` | only status 200 **and** body is gzip | raw gzip bytes as received |
-| `<ts>.error.json` | an error body came back (e.g. 502) | error body as received, not gzipped |
+| `<ts>.error` | the run failed and an error body came back (e.g. 502, 403) | error body as received, decoded, max 1 MB. Neutral extension: bodies can be JSON (Cloudflare 502) or HTML (Cloudflare 403 block page, seen 2026-11-14); the meta records `content_type` |
 
-Failure metadata fields: request time (UTC), `status: failed`, number of attempts, last error type and message, last HTTP status if any, Cloudflare `ray_id` if any, total duration.
+Failure metadata fields: request time (UTC), `status: failed`, number of attempts, `stopped_because` (deadline / retry budget), last error type and message, last HTTP status if any, `content_type`, Cloudflare `ray_id` (from the `cf-ray` header) if any, total duration, retries used today.
 
 Completeness of one hour = count `.meta.json` files (30 expected) and how many have `status: ok`.
 
 Note for readers of v1 files (written before this ADR): they have no `status` field. Derive it from `status_code` (200 → ok, anything else → failed). The Oct 23 502 run wrote a `.meta.json` with `status_code: 502`.
+
+- `size_in_bytes` is the size of the **data file only**, `None` when the run failed
 
 ## Consequences
 
