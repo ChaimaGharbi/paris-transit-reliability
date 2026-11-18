@@ -131,8 +131,21 @@ Note for readers of v1 files (written before this ADR): they have no `status` fi
 
 ## After measurement
 
-To fill in after 2 weeks: failed runs before vs after retries, retries used per day, max run duration, budget exhaustion days, runs stopped at 25 s.
+**Interim, 2026-11-17 (v2 live since 2026-11-14 18:52 UTC, 3 days):**
+
+| | v1 (Oct 16 to 23, 8 days) | v2 (Nov 14 to 17, 3 days) |
+|---|---|---|
+| runs | 5,760 | 2,100 |
+| lost snapshots | 14 (0.24%) | 0 |
+| runs that needed a retry | n/a | 14 (all succeeded on attempt 2) |
+| runs that needed a 3rd attempt | n/a | 0 |
+| retry budget used | n/a | ~5 a day of 230 |
+
+- Recovery rate **100%** (reversal trigger: below 50%): far from the trigger
+- First v2 run: 3.5 MB in 15.5 s (0.23 MB/s) at 18:52 UTC Saturday: a slow-server case, not a big snapshot (a 7.5 MB snapshot downloaded in 3.9 s the day before)
+
+To fill in after 2 weeks: same table over 14 days, max run duration, budget exhaustion days, runs stopped at 25 s.
 
 ## Links
 
-Related: [ADR-0003](0003-bronze-storage-plain-files-fsspec.md)
+Related: Previous: [ADR-0003](0003-bronze-storage-plain-files-fsspec.md)

@@ -1,7 +1,11 @@
 # ADR-0002: Snapshot vs change storage (bronze)
 
-- **Status:** accepted
+- **Status:** superseded
 - **Date:** 2026-10-14
+- **Superseded by:** [ADR-0006](0006-bronze-hourly-zstd-archives.md)
+
+> [!WARNING] Superseded on 2026-11-18 by [ADR-0006](0006-bronze-hourly-zstd-archives.md)
+> Measured journey-level changes were **32% of a full snapshot** (median, 116 pairs), above this ADR's own 30% trigger. Hourly zstd archives measured **18 to 22%** with no diff code.
 
 ## Context
 
@@ -62,7 +66,7 @@ A passage is identified by its natural key (vehicle journey + stop, exact fields
 
 - **Level 1 (now):** store full gzipped snapshots only. The poller does no diffing. Measure the real change ratio.
 - **Level 2 (by Nov 1, well before the disk is full):** build the compaction job and the check.
-- **Amended 2026-11-11:** the Nov 1 date was missed. Compaction is now planned for **Nov 17 to 18**, after the silver job. Not a risk yet: bronze grows ~2.4 GB/day and was 29 GB on Oct 27 (rsync total), so roughly 65 GB by Nov 11 and the disk lasts until about early January. Going to confirm with `df -h` on the VM.
+- **Amended 2026-11-11:** the Nov 1 date was missed. Compaction is now planned for **Nov 17 to 18**, after the silver job. Not a risk yet: bronze grows ~2.4 GB/day and was 29 GB on Oct 27 (rsync total), so roughly 65 GB by Nov 11 and the disk lasts until about early January. Confirm with `df -h` on the VM.
 
 ## Consequences
 
@@ -89,11 +93,13 @@ A passage is identified by its natural key (vehicle journey + stop, exact fields
 - Disk: 187 GB free → **~64 days** at weekday rate. Raw window (7 days) ≈ 20 GB: fits easily
 - PRIM `ResponseTimestamp` was 27 s older than the request: PRIM regenerates on its own cycle, so polling faster than that cycle creates duplicates. Measure with sha256.
 
-Still to measure (needs the diff code for 1 and 2, and 2 weeks of compaction in prod for 3):
-- average change size vs full snapshot size: ...
-- bytes per day: full snapshots ..., keyframes + changes ...
-- compaction check failures: ...
+Still to measure:
+- average change size vs full snapshot size: needs the diff code (Level 2)
+- bytes per day: full snapshots ..., keyframes + changes ...: needs the diff code (Level 2)
+- compaction check failures: needs 2 weeks of compaction in production
+
+**2026-11-18: measured, trigger hit.** `scripts/measure_changes.py` on Mon Nov 16 (hours 05, 12, 15, 23 UTC, 116 pairs): journey-level changes = **median 32.2%, mean 33.3%, max 46.3%** of a full snapshot (night 42%, morning peak 26%); ~35% with one keyframe per hour. **Above 30%: reversal trigger reached.** About 45% of journeys change every 2 minutes, so "mostly identical" was wrong at journey level. Replaced by [ADR-0006](0006-bronze-hourly-zstd-archives.md) (hourly zstd archives: 18 to 22%).
 
 ## Links
 
-Related: [ADR-0001](0001-overall-data-architecture.md)
+Related: Previous: [ADR-0001](0001-overall-data-architecture.md)
