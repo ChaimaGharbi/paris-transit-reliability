@@ -13,6 +13,8 @@ After 8 full days of polling (Oct 16 to 23, cron every 2 min = 720 runs/day), th
 | 13 | `urllib3.exceptions.ProtocolError: Response ended prematurely` | connection dropped **mid-download**, clustered at rush hours (04 to 06 and 13 to 14 UTC) |
 | 1 | HTTP **502** (Oct 23, 09:46 UTC) | Cloudflare JSON error: *"origin ... overloaded or misconfigured"*. Body **not gzip**, but saved as `.json.gz` |
 
+Found later (2026-11-19, by the archive job): a **second v1 502** on **Nov 3 at 06:10 UTC** (07:10 Paris, morning rush), also saved as `.json.gz`. Both files were renamed to `.error` as a one-time migration ([ADR-0006](0006-bronze-hourly-zstd-archives.md)).
+
 Problems found:
 - a failed run leaves **no record in bronze** (only a Traceback in `poller.log`): gaps are hidden (NFR-B3)
 - an error body was stored under the **data filename**: silver would crash on it

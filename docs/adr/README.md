@@ -10,3 +10,4 @@ Each record explains one decision: the context, the options considered, what was
 | [0004](0004-poller-retries-and-failure-records.md) | Poller retries, timeouts and failure records | accepted |
 | [0005](0005-silver-engine-duckdb.md) | Silver processing engine: DuckDB | accepted |
 | [0006](0006-bronze-hourly-zstd-archives.md) | Long-term bronze: hourly zstd archives, verified before raw is deleted | accepted |
+| [0007](0007-silver-grain-last-state-per-call.md) | Silver grain: the last known state of each stop call, built in two steps (hourly, daily) | accepted |

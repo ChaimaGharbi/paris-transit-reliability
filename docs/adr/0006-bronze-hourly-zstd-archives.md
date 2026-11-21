@@ -139,11 +139,28 @@ sequenceDiagram
 
 ## After measurement
 
-Fill in after the first week:
-- real ratio over full days (all 24 hours), per weekday and weekend
-- job duration per day
-- verification failures
-- disk used before and after
+**2026-11-19: first full run (week 1, deletion off).** Archived every hour from Oct 15 21h to Nov 11 23h: **651 hours**.
+
+| | Value |
+|---|---|
+| raw `.json.gz` archived (Oct 15 to Nov 11) | **62 GB** |
+| archives (`bronze_archive/`) | **7.1 GB** |
+| ratio over the whole month | 11.5% (projected 18 to 22% from the Nov 18 test) |
+| per hour | ~6% at night (hour 02 to 03), ~10 to 11% at peak (hour 13 to 15), up to ~15% late evening (hour 23, few journeys) |
+| time | ~22 s per hour on average, 40 to 47 s for a peak hour; first run ~8 h 10 min for 651 hours (18:25 to ~02:35 UTC, with the cron run) |
+| verification failures | **2 of 651**, both v1 error bodies saved as `.json.gz` (see below); **0** after the fix |
+| disk | 91 GB used / 103 GB free (48%) before deletion; ≈ 28 GB used once deletion is on |
+
+- Why better than the test: not measured. Hypothesis: `-T2` in the command-line test split the stream into jobs that compress less well across each other; the job uses the library with the same level and window
+- **The 2 failures:** `BadGzipFile: Not a gzipped file (b'{"')` on `date=2026-10-23/hour=09` and `date=2026-11-03/hour=06`. Both were v1-era Cloudflare **502** JSON bodies saved under the data name (the bug ADR-0004 fixed). The job did the safe thing: failed, kept the raw, retried the next night
+- **Fix, a one-time migration (2026-11-19, 05:49 UTC):** renamed the 2 files to their true name, `.error`, by hand (their `.meta.json` already said `status_code: 502`); then 651 ok, 0 failed. No special case added to the job. Originals stay in the HDD backup under their old names
+
+  ```bash
+  mv date=2026-10-23/hour=09/20261023T094601Z.json.gz date=2026-10-23/hour=09/20261023T094601Z.error
+  mv date=2026-11-03/hour=06/20261103T061001Z.json.gz date=2026-11-03/hour=06/20261103T061001Z.error
+  ```
+
+Still to fill in after week 1: per-day ratio for weekdays vs weekend, nightly job duration, disk after deletion is turned on.
 
 ## Links
 
