@@ -5,7 +5,8 @@
 - rules (exercises 3 and 4): delay_s = expected - aimed departure, NULL for no_aimed, no_report, cancelled, implausible
 - implausible = journey median delay > 60 min or < -10 min (ADR-0007)
 - every run finds the work left to do by itself (hours without hourly file, finished days without daily file): run it every hour
-- usage: python silver.py (everything that is ready)
+- silver_hourly is kept 7 days like raw, then removed once the daily files that need it exist
+- usage: python silver.py            (everything that is ready)
          python silver.py hour 2026-11-14 18
          python silver.py day 2026-11-14
 """
@@ -35,6 +36,7 @@ LOOKAHEAD_HOURS = 3     # calls of 23:xx are still seen after midnight
 LATE_LIMIT_S = 60 * 60    # journey median delay above -> implausible (exercise 4: p99 = 17.8 min)
 EARLY_LIMIT_S = -10 * 60   # journey median delay below -> implausible (p1 = -3.9 min)
 HOUR_DONE_AFTER = 15 * 60  # an hour is finished 15 min after it ends (last poller run + retries)
+HOURLY_KEEP_DAYS = 7    # silver_hourly kept like raw: 7 days, then only the daily file is needed
 
 # only the fields silver uses, with their types: a field missing from a snapshot becomes NULL instead of an error,
 # and duckdb does not have to guess the schema of 30 big files
@@ -195,6 +197,23 @@ def todo():
     return hours, days
 
 
+def clean_hourly():
+    # hourly files of a date are only read to build that date (and the day before, for the 3 hours after midnight)
+    # so once both daily files exist and the date is older than 7 days, they can go: they can be rebuilt from raw or archives
+    cutoff = (now() - timedelta(days=HOURLY_KEEP_DAYS)).date()
+    removed = []
+    for hourly_dir in sorted(fs_silver.glob(f"{silver_root}/silver_hourly/date=*")):
+        date = datetime.strptime(hourly_dir.split("/")[-1].split("=")[-1], "%Y-%m-%d").date()
+        day_before = date - timedelta(days=1)
+        day_before_needs_it = fs_silver.exists(f"{silver_root}/silver_hourly/date={day_before}") or fs_silver.exists(day_path(day_before))
+        if date < cutoff and fs_silver.exists(day_path(date)) and (fs_silver.exists(day_path(day_before)) or not day_before_needs_it):
+            fs_silver.rm(hourly_dir, recursive=True)
+            removed.append(str(date))
+    if removed:
+        print(f"{now().isoformat(timespec='seconds')} silver hourly files removed for {len(removed)} days: {removed[0]} to {removed[-1]}", flush=True)
+    return removed
+
+
 def run():
     con = connect()
     hours, _ = todo()
@@ -204,6 +223,7 @@ def run():
     _, days = todo()
     print(f"{now().isoformat(timespec='seconds')} silver: {len(days)} days to do", flush=True)
     results += [silver_day(con, date) for date in days]
+    clean_hourly()
     print(f"done: {results.count('ok')} ok, {results.count('failed')} failed, {results.count('skipped')} skipped", flush=True)
     return results
 

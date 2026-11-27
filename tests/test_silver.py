@@ -106,5 +106,24 @@ class SilverTests(unittest.TestCase):
         self.assertEqual(days, [])
 
 
+    def test_hourly_files_removed_after_7_days_once_days_exist(self):
+        silver.run()                                         # now = Nov 16: everything still within 7 days
+        self.assertTrue((Path(tmp) / "silver" / "silver_hourly" / "date=2026-11-14").exists())
+        later = pytz.utc.localize(datetime(2026, 11, 23, 12, 0))   # 7+ days after Nov 15
+        with mock.patch.object(silver, "now", lambda: later):
+            removed = silver.clean_hourly()
+        self.assertEqual(removed, ["2026-11-14", "2026-11-15"])
+        self.assertFalse((Path(tmp) / "silver" / "silver_hourly" / "date=2026-11-14").exists())
+        self.assertTrue(Path(silver.day_path("2026-11-14")).exists())   # the daily files stay
+
+    def test_hourly_kept_while_its_day_is_not_built(self):
+        silver.silver_hour(self.con, "2026-11-14", 18)       # hourly file, but no daily file yet
+        later = pytz.utc.localize(datetime(2026, 11, 30, 12, 0))
+        with mock.patch.object(silver, "now", lambda: later):
+            removed = silver.clean_hourly()
+        self.assertEqual(removed, [])
+        self.assertTrue((Path(tmp) / "silver" / "silver_hourly" / "date=2026-11-14").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

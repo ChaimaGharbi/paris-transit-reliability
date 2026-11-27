@@ -73,6 +73,7 @@ sequenceDiagram
 - **Step 1, hourly:** `silver_hourly/date=YYYY-MM-DD/hour=HH/calls.parquet`: the last observation of each call within the hour
 - **Step 2, daily:** `silver/calls/date=YYYY-MM-DD/calls.parquet`: the last observation over the day **plus 3 hours after midnight** (a call planned at 23:58 can be seen at 00:05), only calls **planned** on that day, rules applied
 - One job (`silver.py`) run every hour finds by itself the hours and days that are ready and not done yet
+- **`silver_hourly` is kept 7 days**, like raw, then a date's hourly files are removed once its daily file (and the day before's) exist. They are only an in-between step and can be rebuilt from raw or archives (added 2026-11-27)
 
 ## Consequences
 
@@ -89,7 +90,13 @@ sequenceDiagram
 
 ## After measurement
 
-Fill in after the first full day: calls per day, Parquet size per day, step 1 and step 2 durations on the VM, category shares per day.
+**2026-11-27: backfill done** (started 2026-11-21 ~17:00 UTC, all raw since Oct 15)
+- **43 days** of `silver/calls` (Oct 15 to Nov 26), **0 failures**
+- `silver/calls`: **2.2 GB for 43 days ≈ 51 MB a day**, about **2% of raw bronze** (~2.4 GB a day)
+- `silver_hourly`: **4.7 GB** (~4.6 MB an hour), two thirds of silver for an in-between step: the 7-day retention rule above was added because of this
+- step 1 on the VM: ~7 s for a night hour, ~23 s for an early-morning hour (first hours of the backfill)
+
+Still to fill in: calls per day, category shares per day, step 2 duration.
 
 ## Links
 
