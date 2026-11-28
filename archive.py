@@ -131,6 +131,10 @@ def archive_hour(hour_dir):
             if DELETE_RAW:
                 fs.rm(hour_dir, recursive=True)
                 deleted = True
+                # last hour of the day gone: the date folder is empty, remove it too (ls stays honest)
+                date_dir = hour_dir.rsplit("/", 1)[0]
+                if not fs.ls(date_dir):
+                    fs.rmdir(date_dir)
     except Exception as e:
         # keep the raw hour, log it, go on with the next hour
         error = f"{type(e).__name__}: {str(e)[:300]}"

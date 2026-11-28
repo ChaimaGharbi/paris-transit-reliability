@@ -78,6 +78,7 @@ class ArchiveTests(unittest.TestCase):
         with mock.patch.object(archive, "DELETE_RAW", True):
             archive.run()
         self.assertFalse(self.d05.exists() or self.d15.exists())
+        self.assertFalse(self.d05.parent.exists())  # empty date folder removed too
         self.assertTrue(self.dnew.exists())
         self.assertEqual(unpack(ARCH / f"date={OLD}" / "hour=05.tar.zst"), self.o05)
 
@@ -106,6 +107,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(results[0], "failed")
         self.assertTrue(self.d05.exists()) # raw kept
         self.assertFalse(self.d15.exists())  # the healthy hour still went through
+        self.assertTrue(self.d05.parent.exists())   # date folder kept: hour 05 is still in it
 
     def test_missing_file_in_archive_keeps_raw(self):
         with mock.patch.object(archive, "DELETE_RAW", False):
